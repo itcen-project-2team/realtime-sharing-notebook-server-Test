@@ -4,7 +4,7 @@ pipeline {
   environment {
     DOCKERHUB_CREDENTIALS = 'dockerhub-cred'
     IMAGE_NAME = 'visionn7111/whiteboard-server'
-    SERVER_IP = '10.0.2.179'
+    SERVER_IP = '10.0.2.179' // 프라이빗 WAS 서버 IP
   }
 
   stages {
@@ -21,23 +21,13 @@ pipeline {
       }
     }
 
-    stage('Docker Build') {
+    stage('Copy JAR to WAS Server') {
       steps {
-        sh 'docker build -t $IMAGE_NAME .'
-      }
-    }
-
-    stage('Push to Docker Hub') {
-      steps {
-        withCredentials([usernamePassword(
-          credentialsId: "${DOCKERHUB_CREDENTIALS}",
-          usernameVariable: 'DOCKER_USER',
-          passwordVariable: 'DOCKER_PASS'
-        )]) {
-          sh '''
-            echo $DOCKER_PASS | docker login -u $DOCKER_USER --password-stdin
-            docker push $IMAGE_NAME
-          '''
+        sshagent(credentials: ['webserver-ssh-key']) {
+          sh """
+            ssh -o StrictHostKeyChecking=no ubuntu@$SERVER_IP 'mkdir -p ~/whiteboard-backend/build/libs'
+            scp -o StrictHostKeyChecking=no build/libs/*.jar ubuntu@$SERVER_IP:~/whiteboard-backend/build/libs/
+          """
         }
       }
     }
@@ -52,7 +42,6 @@ pipeline {
               fi
 
               cd ~/whiteboard-backend
-
               git pull
 
               if [ ! -f docker-compose.yml ]; then
@@ -60,7 +49,6 @@ pipeline {
               fi
 
               docker-compose down || true
-              docker-compose pull
               docker-compose up -d --build
             '
           """
