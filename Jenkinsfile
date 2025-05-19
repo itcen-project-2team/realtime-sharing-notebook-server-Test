@@ -11,7 +11,7 @@ pipeline {
 
     stage('Clone') {
       steps {
-        git url: 'https://github.com/itcen-project-2team/realtime-sharing-notebook-server-Test.git', branch: 'main'
+        git url: 'https://github.com/Oodls/realtime-sharing-notebook-server', branch: 'main'
       }
     }
 
